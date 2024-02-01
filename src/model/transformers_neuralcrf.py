@@ -15,7 +15,8 @@ from src.model.module.classifier import MultiNonLinearClassifier, SingleLinearCl
 from typing import Tuple, Union
 from src.config.config import DepModelType, PaserModeType
 from torch.nn import CrossEntropyLoss, functional
-from allennlp.modules.span_extractors import EndpointSpanExtractor
+# from allennlp.modules.span_extractors import EndpointSpanExtractor
+from src.model.module.spanextractor import EndpointSpanExtractor, SelfAttentiveSpanExtractor
 
 from src.data.data_utils import START_TAG, STOP_TAG, PAD, head_to_adj, head_to_adj_label
 
