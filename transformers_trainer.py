@@ -36,7 +36,7 @@ def parse_arguments(parser):
     parser.add_argument('--device', type=str, default="cpu", choices=['cpu', 'cuda:0', 'cuda:1', 'cuda:2'],
                         help="GPU/CPU devices")
     parser.add_argument('--seed', type=int, default=42, help="random seed")
-    parser.add_argument('--dataset', type=str, default="ontonotes")
+    parser.add_argument('--dataset', type=str, default="ontonotes_sample")
     parser.add_argument('--optimizer', type=str, default="adamw", help="This would be useless if you are working with transformers package")
     parser.add_argument('--learning_rate', type=float, default=2e-5, help="usually we use 0.01 for sgd but 2e-5 working with bert/roberta")
     parser.add_argument('--momentum', type=float, default=0.0)
@@ -124,7 +124,7 @@ def train_model(config: Config, epoch: int, train_loader: DataLoader, dev_loader
                                  attention_mask = batch.attention_mask.to(config.device),
                                  depheads=batch.dephead_ids.to(config.device), deplabels=batch.deplabel_ids.to(config.device),
                                  all_span_lens=batch.all_span_lens.to(config.device), all_span_ids = batch.all_span_ids.to(config.device),
-                                 all_span_weight=batch.all_span_weigh.to(config.device), real_span_mask=batch.all_span_mask.to(config.device),
+                                 all_span_weight=batch.all_span_weight.to(config.device), real_span_mask=batch.all_span_mask.to(config.device),
                                  labels = batch.label_ids.to(config.device))
                 else:
                     loss = model(subword_input_ids = batch.input_ids.to(config.device),
@@ -192,6 +192,7 @@ def train_model(config: Config, epoch: int, train_loader: DataLoader, dev_loader
 def evaluate_model(config: Config, model: TransformersCRF, data_loader: DataLoader, name: str, insts: List, print_each_type_metric: bool = False):
     ## evaluation
     p_dict, total_predict_dict, total_entity_dict = Counter(), Counter(), Counter()
+    total_correct, total_predict, total_golden = 0, 0, 0
     batch_size = data_loader.batch_size
     with torch.no_grad(), torch.cuda.amp.autocast(enabled=bool(config.fp16)):
         for batch_id, batch in tqdm(enumerate(data_loader, 0), total=len(data_loader)):
@@ -210,7 +211,11 @@ def evaluate_model(config: Config, model: TransformersCRF, data_loader: DataLoad
                              labels=batch.label_ids.to(config.device), is_train=False)
                 span_f1s = span_f1_prune(batch.all_span_ids.to(config.device), logits,
                                                          batch.label_ids.to(config.device), batch.all_span_mask.to(config.device))
-
+                batch_correct, batch_pred, batch_golden = span_f1s
+                total_correct += batch_correct.item()
+                total_predict += batch_pred.item()
+                total_golden += batch_golden.item()
+                batch_id += 1
             else:
                 logits = model(subword_input_ids=batch.input_ids.to(config.device),
                              word_seq_lens=batch.word_seq_len.to(config.device),
@@ -244,11 +249,9 @@ def evaluate_model(config: Config, model: TransformersCRF, data_loader: DataLoad
         if config.earlystop_atr == "macro" and len(f1Scores) > 0:
             fscore = sum(f1Scores) / len(f1Scores)
     else: # PaserModeType.span
-        all_counts = torch.stack([span_f1 for span_f1 in span_f1s]).sum(0)
-        correct_pred, total_pred, total_golden = all_counts
-        print('correct_pred, total_pred, total_golden: ', correct_pred, total_pred, total_golden)
-        precision =correct_pred / (total_pred+1e-10)
-        recall = correct_pred / (total_golden + 1e-10)
+        # print('correct_pred, total_pred, total_golden: ', total_correct, total_predict, total_golden)
+        precision =total_correct / (total_predict+1e-10)
+        recall = total_correct / (total_golden + 1e-10)
         fscore = precision * recall * 2 / (precision + recall + 1e-10)
         logger.info(f"[{name} set Total] Prec.: {precision:.2f}, Rec.: {recall:.2f}, Micro F1: {fscore:.2f}")
     return [precision, recall, fscore]
