@@ -32,7 +32,7 @@ def span_f1_prune(all_span_idxs,predicts,span_label_ltoken,real_span_mask_ltoken
     pred_label_idx = torch.max(predicts, dim=-1)[1] # (bs, n_span)
     span_probs = predicts.tolist()
     nonO_idxs2labs, nonO_kidxs_all, pred_label_idx_new = get_pruning_predIdxs(pred_label_idx, all_span_idxs, span_probs)
-    pred_label_idx = pred_label_idx_new.cuda()
+    pred_label_idx = pred_label_idx_new.to(all_span_idxs.device)
     pred_label_mask = (pred_label_idx!=0)  # (bs, n_span)
     all_correct = pred_label_idx == span_label_ltoken
     all_correct = all_correct*pred_label_mask*real_span_mask_ltoken.bool()
@@ -154,7 +154,7 @@ def clean_overlapping_span(idxs_list,nonO_idxs2prob):
     if len(didxs)==0:
         kidxs.append(idxs_list[-1])
     else:
-        if idxs_list[-1] not in didxs:
+        if idxs_list[-1].tolist() not in didxs:
             kidxs.append(idxs_list[-1])
 
     return kidxs
@@ -189,7 +189,7 @@ def get_pruning_predIdxs(pred_label_idx, all_span_idxs,span_probs):
         for j, (plb, idx) in enumerate(zip(bs, idxs)):
             nlb_id = 0
             # if idx in nonO_kidxs_all[i]:
-            if torch.any(torch.eq(nonO_kidxs_all[i], idx)):
+            if any(idx.equal(kidx) for kidx in nonO_kidxs_all[i]):
                 nlb_id = plb
             pred_label_idx_new1.append(nlb_id)
         while len(pred_label_idx_new1) <n_span:
