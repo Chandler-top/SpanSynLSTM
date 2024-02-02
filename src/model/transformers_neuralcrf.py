@@ -17,7 +17,6 @@ from src.config.config import DepModelType, PaserModeType
 from torch.nn import CrossEntropyLoss, functional
 # from allennlp.modules.span_extractors import EndpointSpanExtractor
 from src.model.module.spanextractor import EndpointSpanExtractor, SelfAttentiveSpanExtractor
-
 from src.data.data_utils import START_TAG, STOP_TAG, PAD, head_to_adj, head_to_adj_label
 
 
@@ -52,14 +51,22 @@ class TransformersCRF(nn.Module):
             self.spanLen_emb_dim = 50 # the embedding dim of a span length
             self.span_combination_mode = 'x,y' # Train data in format defined by --data-io param
             #  bucket_widths: Whether to bucket the span widths into log-space buckets. If `False`, the raw span widths are used.
-            self._endpoint_span_extractor = EndpointSpanExtractor(config.dggcn_outputsize,
-                                                                  combination=self.span_combination_mode,
-                                                                  num_width_embeddings=self.max_span_width,
-                                                                  span_width_embedding_dim=self.tokenLen_emb_dim,
-                                                                  bucket_widths=True)
+            if self.dep_model == DepModelType.dggcn:
+                self._endpoint_span_extractor = EndpointSpanExtractor(config.dggcn_outputsize,
+                                                                      combination=self.span_combination_mode,
+                                                                      num_width_embeddings=self.max_span_width,
+                                                                      span_width_embedding_dim=self.tokenLen_emb_dim,
+                                                                      bucket_widths=True)
+                input_dim = config.dggcn_outputsize * 2 + self.tokenLen_emb_dim + self.spanLen_emb_dim
+            else:
+                self._endpoint_span_extractor = EndpointSpanExtractor(self.transformer.get_output_dim(),
+                                                                      combination=self.span_combination_mode,
+                                                                      num_width_embeddings=self.max_span_width,
+                                                                      span_width_embedding_dim=self.tokenLen_emb_dim,
+                                                                      bucket_widths=True)
+                input_dim = self.transformer.get_output_dim() * 2 + self.tokenLen_emb_dim + self.spanLen_emb_dim
             self.linear = nn.Linear(10, 1)
             self.score_func = nn.Softmax(dim=-1)
-            input_dim = config.dggcn_outputsize * 2 + self.tokenLen_emb_dim + self.spanLen_emb_dim
             self.span_classifier = MultiNonLinearClassifier(input_dim, config.label_size, 0.2) # model_dropout = 0.2
             self.spanLen_embedding = nn.Embedding(self.max_span_width + 1, self.spanLen_emb_dim, padding_idx=0)
             self.classifier = nn.Softmax(dim=-1)
@@ -151,7 +158,7 @@ class TransformersCRF(nn.Module):
                 spanlen_rep = self.spanLen_embedding(all_span_lens)  # (bs, n_span, len_dim)
                 spanlen_rep = functional.relu(spanlen_rep)
                 all_span_rep = torch.cat((all_span_rep, spanlen_rep), dim=-1)
-                all_span_rep = self.span_embedding(all_span_rep)  # (batch,n_span,n_class)
+                all_span_rep = self.span_classifier(all_span_rep)
                 if is_train:
                     _, n_span = labels.size()
                     all_span_rep = all_span_rep.view(-1, self.label_size)
