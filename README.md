@@ -8,8 +8,6 @@ Python 3.7
 
 Pytorch 1.4.0
 
-AllenNLP 1.4.0
-
 Transformers 3.3.1
 
 # Performance
