@@ -34,11 +34,11 @@ def span_f1_prune(all_span_idxs,predicts,span_label_ltoken,real_span_mask_ltoken
     nonO_idxs2labs, nonO_kidxs_all, pred_label_idx_new = get_pruning_predIdxs(pred_label_idx, all_span_idxs, span_probs)
     pred_label_idx = pred_label_idx_new.to(predicts.device)
     pred_label_mask = (pred_label_idx!=0)  # (bs, n_span)
-    all_correct = pred_label_idx == span_label_ltoken
-    all_correct = all_correct*pred_label_mask*real_span_mask_ltoken.bool()
-    correct_pred = torch.sum(all_correct)
-    total_pred = torch.sum(pred_label_idx!=0 )
-    total_golden = torch.sum(span_label_ltoken!=0)
+    # all_correct = pred_label_idx == span_label_ltoken
+    # all_correct = all_correct*pred_label_mask*real_span_mask_ltoken.bool()
+    # correct_pred = torch.sum(all_correct)
+    # total_pred = torch.sum(pred_label_idx!=0 )
+    # total_golden = torch.sum(span_label_ltoken!=0)
 
     # 根据 real_span_mask_ltoken 过滤填充部分
     valid_positions = real_span_mask_ltoken.bool()
