@@ -7,94 +7,16 @@ from typing import List, Dict
 from torch.utils.data import Dataset
 from transformers import PreTrainedTokenizerFast, RobertaTokenizer
 import numpy as np
-from src.config.config import PaserModeType
-from src.data.data_utils import convert_iobes, build_spanlabel_idx, build_label_idx, build_deplabel_idx
+from src.config.config import PaserModeType, DepModelType
+from src.data.data_utils import convert_iobes, build_spanlabel_idx, build_label_idx, build_deplabel_idx, enumerate_spans
 from src.data import Instance
 import logging
 from transformers.tokenization_utils_base import BatchEncoding
 
 logger = logging.getLogger(__name__)
 
-# def convert_instances_to_feature_tensors(self, paser_mode: int, max_entity_length: int, instances: List[Instance],
-#                                          tokenizer: PreTrainedTokenizerFast,
-#                                          deplabel2idx: Dict[str, int],
-#                                          label2idx: Dict[str, int]) -> List[Dict]:
-#     features = []
-#     ## tokenize the word into word_piece / BPE
-#     ## NOTE: adding a leading space is important for BART/GPT/Roberta tokenization.
-#     ## Related GitHub issues:
-#     ##      https://github.com/huggingface/transformers/issues/1196
-#     ##      https://github.com/pytorch/fairseq/blob/master/fairseq/models/roberta/hub_interface.py#L38-L56
-#     ##      https://github.com/ThilinaRajapakse/simpletransformers/issues/458
-#     # assert tokenizer.add_prefix_space ## has to be true, in order to tokenize pre-tokenized input
-#     print("[Data Info] We are not limiting the max length in tokenizer. You should be aware of that")
-#
-#     for idx, inst in tqdm(enumerate(instances)):
-#         words = inst.ori_words
-#         orig_to_tok_index = []
-#         res = tokenizer.encode_plus(words, is_split_into_words=True)
-#         subword_idx2word_idx = res.word_ids(batch_index=0)
-#         prev_word_idx = -1
-#         for i, mapped_word_idx in enumerate(subword_idx2word_idx):
-#             """
-#             Note: by default, we use the first wordpiece/subword token to represent the word
-#             If you want to do something else (e.g., use last wordpiece to represent), modify them here.
-#             """
-#             if mapped_word_idx is None:## cls and sep token
-#                 continue
-#             if mapped_word_idx != prev_word_idx:
-#                 ## because we take the first subword to represent the whold word
-#                 orig_to_tok_index.append(i)
-#                 prev_word_idx = mapped_word_idx
-#         assert len(orig_to_tok_index) == len(words)
-#
-#         segment_ids = [0] * len(res["input_ids"])
-#
-#         dep_labels = inst.dep_labels
-#         deplabel_ids = [deplabel2idx[dep_label] for dep_label in dep_labels] if dep_labels else[-100] * len(words)
-#         dephead_ids = inst.dep_heads
-#
-#         if paser_mode == PaserModeType.crf:
-#             labels = inst.labels
-#             label_ids = [label2idx[label] for label in labels] if labels else [-100] * len(words)
-#             features.append({"input_ids": res["input_ids"],
-#                              "attention_mask": res["attention_mask"],
-#                              "orig_to_tok_index": orig_to_tok_index,
-#                              "token_type_ids": segment_ids,
-#                              "word_seq_len": len(orig_to_tok_index),
-#                              "dephead_ids": dephead_ids,
-#                              "deplabel_ids": deplabel_ids,
-#                              "label_ids": label_ids})
-#         else:
-#             span_labels = {spanlabel[0]: label2idx[spanlabel[1]] for spanlabel in inst.span_labels}
-#             span_lens = []
-#             span_weights = []
-#             # If entity_labels is empty, assign default "O" label for the entire sentence
-#             max_span_length = min(max_entity_length, len(words))
-#             spanlabel_ids = []
-#             for entity_start in range(len(words)):
-#                 for entity_end in range(entity_start + 1, entity_start + max_span_length + 1):
-#                     if entity_end <= len(words):
-#                         label = span_labels.get((entity_start, entity_end), 0)
-#                         weight = 0.5 # self.neg_span_weight = 0.5
-#                         if label != 0: # 0 is label 'O'
-#                             weight = 1.0
-#                         span_weights.append(weight)
-#                         spanlabel_ids.append(((entity_start, entity_end), label))
-#                         span_lens.append(entity_end - entity_start + 1)
-#
-#
-#             features.append({"input_ids": res["input_ids"], "attention_mask": res["attention_mask"],
-#                              "orig_to_tok_index": orig_to_tok_index, "token_type_ids": segment_ids,
-#                              "word_seq_len": len(orig_to_tok_index),
-#                              "dephead_ids": dephead_ids, "deplabel_ids": deplabel_ids,
-#                              "span_lens": span_lens, "span_weight": span_weights,
-#                              "span_mask": [1] * len(span_weights), "spanlabel_ids": spanlabel_ids})
-#     return features
-
 class TransformersNERDataset(Dataset):
-
-    def __init__(self, parser_mode: int, file: str,
+    def __init__(self, parser_mode: int, dep_model: int, file: str,
                  tokenizer: PreTrainedTokenizerFast,
                  is_train: bool,
                  sents: List[List[str]] = None,
@@ -106,6 +28,7 @@ class TransformersNERDataset(Dataset):
         """
         ## read all the instances. sentences and labels
         self.parser_mode = parser_mode
+        self.dep_mode = dep_model
         self.max_entity_length = 0
         self.insts = self.read_file(file=file, number=number) if sents is None else self.read_from_sentences(sents)
         minus = int((self.max_entity_length + 1) * self.max_entity_length / 2)
@@ -123,17 +46,22 @@ class TransformersNERDataset(Dataset):
 
                 self.idx2labels = idx2labels
                 self.label2idx = label2idx
-                self.deplabel2idx, self.root_dep_label_id = build_deplabel_idx(self.insts)
+                if dep_model != DepModelType.none:
+                    self.deplabel2idx, self.root_dep_label_id = build_deplabel_idx(self.insts)
         else:
             assert label2idx is not None ## for dev/test dataset we don't build label2idx
             self.label2idx = label2idx
-            self.deplabel2idx = deplabel2idx
+            if dep_model != 0:
+                self.deplabel2idx = deplabel2idx
 
             # check_all_labels_in_dict(insts=insts, label2idx=self.label2idx)
-        self.insts_ids = self.convert_instances_to_feature_tensors(parser_mode, self.insts, tokenizer, self.deplabel2idx, label2idx)
+        if dep_model != DepModelType.none:
+            self.insts_ids = self.convert_instances_to_feature_tensors(parser_mode, self.insts, tokenizer, self.deplabel2idx, label2idx)
+        else:
+            self.insts_ids = self.convert_instances_to_feature_tensors(parser_mode, self.insts, tokenizer, None, label2idx)
         self.tokenizer = tokenizer
 
-    def convert_instances_to_feature_tensors(self, parser_mode:int, instances: List[Instance],
+    def convert_instances_to_feature_tensors(self, parser_mode: int, instances: List[Instance],
                                              tokenizer: PreTrainedTokenizerFast,
                                              deplabel2idx: Dict[str, int],
                                              label2idx: Dict[str, int]) -> List[Dict]:
@@ -160,11 +88,13 @@ class TransformersNERDataset(Dataset):
             assert len(orig_to_tok_index) == len(words)
 
             segment_ids = [0] * len(res["input_ids"])
-
-            dep_labels = inst.dep_labels
-            deplabel_ids = [deplabel2idx[dep_label] for dep_label in dep_labels] if dep_labels else [-100] * len(words)
-            dephead_ids = inst.dep_heads
-
+            if deplabel2idx != None:
+                dep_labels = inst.dep_labels
+                deplabel_ids = [deplabel2idx[dep_label] for dep_label in dep_labels] if dep_labels else [-100] * len(words)
+                dephead_ids = inst.dep_heads
+            else:
+                deplabel_ids = None
+                dephead_ids = None
             if parser_mode == PaserModeType.crf:
                 labels = inst.labels
                 label_ids = [label2idx[label] for label in labels] if labels else [-100] * len(words)
@@ -193,10 +123,10 @@ class TransformersNERDataset(Dataset):
                             span_weights.append(weight)
                             spanlabel_ids.append(((entity_start, entity_end), label))
                             span_lens.append(entity_end - entity_start + 1)
-                # spans = []
-                # for start, end in self.enumerate_spans(words, max_span_width=max_span_length):
-                #     span_ix = (start, end)
-                #     spans.append((start, end))
+                spans = []
+                for start, end in self.enumerate_spans(words, max_span_width=max_span_length):
+                    span_ix = (start, end)
+                    spans.append((start, end))
 
                 features.append({"input_ids": res["input_ids"], "attention_mask": res["attention_mask"],
                                  "orig_to_tok_index": orig_to_tok_index, "token_type_ids": segment_ids,
@@ -301,30 +231,38 @@ class TransformersNERDataset(Dataset):
             find_root = False
             for line in tqdm(f.readlines()):
                 line = line.rstrip()
-                # if line.startswith("-DOCSTART"):
-                #     continue
-                if line == "":
+                if line.startswith("-DOCSTART"):
+                    continue
+                if line == "" and len(words) != 0:
                     if self.parser_mode == PaserModeType.crf:
                         labels = convert_iobes(labels)
                     else:
                         chunks = self.get_chunks(labels)
-                    insts.append(Instance(words=words, ori_words=ori_words, dep_heads=dep_heads, dep_labels=dep_labels, span_labels=chunks, labels=labels))
+                    if 'conll' in file:
+                        insts.append(Instance(words=words, ori_words=ori_words, dep_heads=None, dep_labels=None, span_labels=chunks, labels=labels))
+                    else:
+                        insts.append(Instance(words=words, ori_words=ori_words, dep_heads=dep_heads, dep_labels=dep_labels, span_labels=chunks, labels=labels))
+                        find_root = False
+                        dep_heads = []
+                        dep_labels = []
                     words = []
                     ori_words = []
-                    dep_heads = []
-                    dep_labels = []
                     labels = []
-                    find_root = False
                     if len(insts) == number:
                         break
                     continue
+                elif line == "" and len(words) == 0:
+                    continue
                 ls = line.split()
-                word, head, dep_label, label = ls[1], int(ls[6]), ls[7], ls[-1]
-                if head == 0 and find_root:
-                    raise ValueError("already have a root")
+                if 'conll' in file:
+                    word, label = ls[0], ls[-1]
+                else:
+                    word, head, dep_label, label = ls[1], int(ls[6]), ls[7], ls[-1]
+                    if head == 0 and find_root:
+                        raise ValueError("already have a root")
+                    dep_heads.append(head - 1) ## because of 0-indexed.
+                    dep_labels.append(dep_label)
                 ori_words.append(word)
-                dep_heads.append(head - 1) ## because of 0-indexed.
-                dep_labels.append(dep_label)
                 words.append(word)
                 labels.append(label)
         print("number of sentences: {}".format(len(insts)))
@@ -349,8 +287,12 @@ class TransformersNERDataset(Dataset):
             type_ids = feature["token_type_ids"] + [self.tokenizer.pad_token_type_id] * padding_length
             padding_word_len = max_seq_len - len(feature["orig_to_tok_index"])
             orig_to_tok_index = feature["orig_to_tok_index"] + [0] * padding_word_len
-            dephead_ids = feature["dephead_ids"] + [0] * padding_word_len
-            deplabel_ids = feature["deplabel_ids"] + [0] * padding_word_len
+            if self.dep_mode != DepModelType.none:
+                dephead_ids = feature["dephead_ids"] + [0] * padding_word_len
+                deplabel_ids = feature["deplabel_ids"] + [0] * padding_word_len
+            else:
+                dephead_ids = [0] * max_seq_len
+                deplabel_ids = [0] * max_seq_len
             if self.parser_mode == PaserModeType.crf:
                 label_ids = feature["label_ids"] + [0] * padding_word_len
                 batch[i] = {"input_ids": input_ids,"attention_mask": mask,
@@ -393,7 +335,7 @@ if __name__ == '__main__':
     # from transformers import RobertaTokenizer
     tokenizer = RobertaTokenizerFast.from_pretrained('../../roberta-base', add_prefix_space=True)
     # tokenizer = RobertaTokenizer.from_pretrained('../../roberta-base', add_prefix_space=True)
-    dataset = TransformersNERDataset(parser_mode=PaserModeType.span, file="../../data/ontonotes/test.sd.conllx",tokenizer=tokenizer, is_train=True)
+    dataset = TransformersNERDataset(parser_mode=PaserModeType.span, dep_model=DepModelType.none, file="../../data/conll03/test.txt",tokenizer=tokenizer, is_train=True)
     from torch.utils.data import DataLoader
     train_dataloader = DataLoader(dataset, batch_size=10, shuffle=True, num_workers=2, collate_fn=dataset.collate_to_max_length)
     print(len(train_dataloader))
