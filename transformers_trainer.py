@@ -36,7 +36,7 @@ def parse_arguments(parser):
     parser.add_argument('--device', type=str, default="cpu", choices=['cpu', 'cuda:0', 'cuda:1', 'cuda:2'],
                         help="GPU/CPU devices")
     parser.add_argument('--seed', type=int, default=42, help="random seed")
-    parser.add_argument('--dataset', type=str, default="conll2003_sample")
+    parser.add_argument('--dataset', type=str, default="ontonotes_sample")
     parser.add_argument('--optimizer', type=str, default="adamw", help="This would be useless if you are working with transformers package")
     parser.add_argument('--learning_rate', type=float, default=2e-5, help="usually we use 0.01 for sgd but 2e-5 working with bert/roberta")
     parser.add_argument('--momentum', type=float, default=0.0)
@@ -66,7 +66,7 @@ def parse_arguments(parser):
     parser.add_argument("--print_detail_f1", type= int, default= 0, choices= [0, 1], help= "Open and close printing f1 scores for each tag after each evaluation epoch")
     parser.add_argument("--earlystop_atr", type=str, default="micro", choices= ["micro", "macro"], help= "Choose between macro f1 score and micro f1 score for early stopping evaluation")
     parser.add_argument('--dep_model', type=str, default="none", choices=["none", "dggcn"], help="dg_gcn mode consists of both GCN and Syn-LSTM")
-    parser.add_argument('--parser_mode', type=str, default="span", choices=["crf", "span"], help="parser model consists of crf and span")
+    parser.add_argument('--parser_mode', type=str, default="crf", choices=["crf", "span"], help="parser model consists of crf and span")
 
     parser.add_argument('--mode', type=str, default="train", choices=["train", "test"], help="training model or test mode")
     parser.add_argument('--test_file', type=str, default="data/ontonotes/test.sd.conllx", help="test file for test mode, only applicable in test mode")
@@ -195,7 +195,8 @@ def evaluate_model(config: Config, model: TransformersCRF, data_loader: DataLoad
     total_correct, total_predict, total_golden = 0, 0, 0
     batch_size = data_loader.batch_size
     with torch.no_grad(), torch.cuda.amp.autocast(enabled=bool(config.fp16)):
-        for batch_id, batch in tqdm(enumerate(data_loader, 0), total=len(data_loader)):
+        # for batch_id, batch in tqdm(enumerate(data_loader, 0), total=len(data_loader)):
+        for batch_id, batch in enumerate(data_loader, 0):
             one_batch_insts = insts[batch_id * batch_size:(batch_id + 1) * batch_size]
             if config.parser_mode == PaserModeType.span:
                 logits = model(subword_input_ids=batch.input_ids.to(config.device),
@@ -300,7 +301,7 @@ def main():
         test_dataset = TransformersNERDataset(opt.test_file, tokenizer, number=opt.test_num,
                                               label2idx=saved_config.label2idx, is_train=False)
         test_dataloader = DataLoader(test_dataset, batch_size=opt.batch_size, shuffle=False, num_workers=1,
-                                     collate_fn=test_dataset.collate_fn)
+                                     collate_fn=test_dataset.collate_to_max_length)
         model = TransformersCRF(saved_config)
         model.load_state_dict(torch.load(f"{folder_name}/lstm_crf.m", map_location=device))
         model.eval()
