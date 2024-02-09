@@ -25,7 +25,7 @@ Transformers 3.3.1
 | Roberta-base-Syn-LSTM-Span | OntoNotes 5  |  -  | -  | -  |
 | Roberta-base-LSTM-CRF  | OntoNotes 5  |  -  | -  | -  |
 | Roberta-base-LSTM-Span | OntoNotes 5  |  -  | -  | -  |
-| Roberta-base-CRF  | CoNLL-2003  | - | -  | -  |
+| Roberta-base-CRF  | CoNLL-2003  | 92.00 | 93.04  | 92.52  |
 | Roberta-base-Span  | CoNLL-2003  | 92.47 | 92.81 | 92.65 |
 
 # Running
