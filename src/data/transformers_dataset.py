@@ -256,7 +256,7 @@ class TransformersNERDataset(Dataset):
                 ls = line.split()
                 if 'conll' in file:
                     word, label = ls[0], ls[-1]
-                else:
+                elif 'note' in file:
                     word, head, dep_label, label = ls[1], int(ls[6]), ls[7], ls[-1]
                     if head == 0 and find_root:
                         raise ValueError("already have a root")
@@ -335,7 +335,7 @@ if __name__ == '__main__':
     # from transformers import RobertaTokenizer
     tokenizer = RobertaTokenizerFast.from_pretrained('../../roberta-base', add_prefix_space=True)
     # tokenizer = RobertaTokenizer.from_pretrained('../../roberta-base', add_prefix_space=True)
-    dataset = TransformersNERDataset(parser_mode=PaserModeType.span, dep_model=DepModelType.none, file="../../data/conll03/test.txt",tokenizer=tokenizer, is_train=True)
+    dataset = TransformersNERDataset(parser_mode=PaserModeType.span, dep_model=DepModelType.none, file="../../data/ontonotes_sample/train.sd.conllx",tokenizer=tokenizer, is_train=True)
     from torch.utils.data import DataLoader
     train_dataloader = DataLoader(dataset, batch_size=10, shuffle=True, num_workers=2, collate_fn=dataset.collate_to_max_length)
     print(len(train_dataloader))
