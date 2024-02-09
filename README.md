@@ -19,12 +19,12 @@ Transformers 3.3.1
 | Roberta-base-CRF  | Chinese  | - |
 | Roberta-base-Span  | Chinese  | - |
 
-| Model  | Dataset | F1 |
-| ------------- | ------------- |------------- |
-| Roberta-base-Syn-LSTM-CRF  | English  |  -  |
-| Roberta-base-Syn-LSTM-Span | English  |  -  |
-| Roberta-base-CRF  | English  | - |
-| Roberta-base-Span  | English  | - |
+| Model  | Dataset |  P | R | F1 |
+| ------------- | ------------- |------------- |------------- |------------- |
+| Roberta-base-Syn-LSTM-CRF  | English  |  -  | -  | -  |
+| Roberta-base-Syn-LSTM-Span | English  |  -  | -  | -  |
+| Roberta-base-CRF  | English  | - | -  | -  |
+| Roberta-base-Span  | English  | 92.47 | 92.81 | 92.65 |
 
 # Running
 Default:
