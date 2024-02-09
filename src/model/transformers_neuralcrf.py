@@ -39,7 +39,8 @@ class TransformersCRF(nn.Module):
                                      self.transformer.get_output_dim())  ### lstm hidden size
         self.label_size = config.label_size
         self.parser_mode = config.parser_mode
-        self.root_dep_label_id = config.root_dep_label_id
+        if self.dep_model != DepModelType.none:
+            self.root_dep_label_id = config.root_dep_label_id
         if self.parser_mode == PaserModeType.crf:
             self.inferencer = LinearCRF(label_size=config.label_size, label2idx=config.label2idx, add_iobes_constraint=config.add_iobes_constraint,
                                         idx2labels=config.idx2labels)

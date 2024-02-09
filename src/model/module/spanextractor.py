@@ -502,7 +502,9 @@ def get_range_vector(size: int, device: int) -> torch.Tensor:
     is meant to avoid copy data from CPU to GPU.
     """
     if device > -1:
-        return torch.cuda.LongTensor(size, device=device).fill_(1).cumsum(0) - 1
+        # return torch.cuda.LongTensor(size, device=device).fill_(1).cumsum(0) - 1
+        return torch.arange(size, device=device, dtype=torch.long).fill_(1).cumsum(0) - 1
+
     else:
         return torch.arange(0, size, dtype=torch.long)
 
