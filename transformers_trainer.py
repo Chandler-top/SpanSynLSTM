@@ -13,7 +13,7 @@ import tarfile
 from tqdm import tqdm
 from collections import Counter
 from src.data import TransformersNERDataset
-from src.config.config import PaserModeType
+from src.config.config import PaserModeType, DepModelType
 from src.config.span_eval import span_f1,span_f1_prune,get_predict,get_predict_prune
 
 from torch.utils.data import DataLoader
@@ -36,7 +36,7 @@ def parse_arguments(parser):
     parser.add_argument('--device', type=str, default="cpu", choices=['cpu', 'cuda:0', 'cuda:1', 'cuda:2'],
                         help="GPU/CPU devices")
     parser.add_argument('--seed', type=int, default=42, help="random seed")
-    parser.add_argument('--dataset', type=str, default="ontonotes_sample")
+    parser.add_argument('--dataset', type=str, default="conll2003_sample")
     parser.add_argument('--optimizer', type=str, default="adamw", help="This would be useless if you are working with transformers package")
     parser.add_argument('--learning_rate', type=float, default=2e-5, help="usually we use 0.01 for sgd but 2e-5 working with bert/roberta")
     parser.add_argument('--momentum', type=float, default=0.0)
@@ -65,7 +65,7 @@ def parse_arguments(parser):
 
     parser.add_argument("--print_detail_f1", type= int, default= 0, choices= [0, 1], help= "Open and close printing f1 scores for each tag after each evaluation epoch")
     parser.add_argument("--earlystop_atr", type=str, default="micro", choices= ["micro", "macro"], help= "Choose between macro f1 score and micro f1 score for early stopping evaluation")
-    parser.add_argument('--dep_model', type=str, default="dggcn", choices=["none", "dggcn"], help="dg_gcn mode consists of both GCN and Syn-LSTM")
+    parser.add_argument('--dep_model', type=str, default="none", choices=["none", "dggcn"], help="dg_gcn mode consists of both GCN and Syn-LSTM")
     parser.add_argument('--parser_mode', type=str, default="span", choices=["crf", "span"], help="parser model consists of crf and span")
 
     parser.add_argument('--mode', type=str, default="train", choices=["train", "test"], help="training model or test mode")
@@ -200,16 +200,17 @@ def evaluate_model(config: Config, model: TransformersCRF, data_loader: DataLoad
             if config.parser_mode == PaserModeType.span:
                 logits = model(subword_input_ids=batch.input_ids.to(config.device),
                              word_seq_lens=batch.word_seq_len.to(config.device),
-                             orig_to_tok_index=batch.orig_to_tok_index.to(config.device),
-                             attention_mask=batch.attention_mask.to(config.device),
-                             depheads=batch.dephead_ids.to(config.device),
-                             deplabels=batch.deplabel_ids.to(config.device),
-                             all_span_lens=batch.all_span_lens.to(config.device),
-                             all_span_ids=batch.all_span_ids.to(config.device),
-                             all_span_weight=batch.all_span_weight.to(config.device),
-                             real_span_mask=batch.all_span_mask.to(config.device),
+                             orig_to_tok_index=batch.orig_to_tok_index.to(config.device), attention_mask=batch.attention_mask.to(config.device),
+                             depheads=batch.dephead_ids.to(config.device), deplabels=batch.deplabel_ids.to(config.device),
+                             all_span_lens=batch.all_span_lens.to(config.device), all_span_ids=batch.all_span_ids.to(config.device),
+                             all_span_weight=batch.all_span_weight.to(config.device), real_span_mask=batch.all_span_mask.to(config.device),
                              labels=batch.label_ids.to(config.device), is_train=False)
-                span_f1s = span_f1_prune(batch.all_span_ids.to(config.device), logits,
+                batch_all_real_span_ids = []
+                for i in range(batch.all_span_ids.size(0)):
+                    selected_ids = batch.all_span_ids[i][batch.all_span_mask[i].nonzero(as_tuple=True)]
+                    selected_ids_tuple = [tuple(map(int, coord)) for coord in selected_ids.tolist()]
+                    batch_all_real_span_ids.append(selected_ids_tuple)
+                span_f1s = span_f1_prune(batch_all_real_span_ids, logits,
                                                          batch.label_ids.to(config.device), batch.all_span_mask.to(config.device))
                 batch_correct, batch_pred, batch_golden = span_f1s
                 total_correct += batch_correct.item()
@@ -221,8 +222,7 @@ def evaluate_model(config: Config, model: TransformersCRF, data_loader: DataLoad
                              word_seq_lens=batch.word_seq_len.to(config.device),
                              orig_to_tok_index=batch.orig_to_tok_index.to(config.device),
                              attention_mask=batch.attention_mask.to(config.device),
-                             depheads=batch.dephead_ids.to(config.device),
-                             deplabels=batch.deplabel_ids.to(config.device),
+                             depheads=batch.dephead_ids.to(config.device), deplabels=batch.deplabel_ids.to(config.device),
                              all_span_lens=None, all_span_ids=None, all_span_weight=None, real_span_mask=None,
                              labels=batch.label_ids.to(config.device), is_train=False)
                 batch_p , batch_predict, batch_total = evaluate_batch_insts(one_batch_insts, logits, batch.label_ids, batch.word_seq_len, config.idx2labels)
@@ -243,6 +243,8 @@ def evaluate_model(config: Config, model: TransformersCRF, data_loader: DataLoad
         total_p = sum(list(p_dict.values()))
         total_predict = sum(list(total_predict_dict.values()))
         total_entity = sum(list(total_entity_dict.values()))
+        # print('correct_pred, total_pred, total_golden: ', total_p, total_predict, total_entity)
+        # conll03 dev total_entity 5942  # conll03 test total_entity 5648
         precision, recall, fscore = get_metric(total_p, total_entity, total_predict)
         logger.info(f"[{name} set Total] Prec.: {precision:.2f}, Rec.: {recall:.2f}, Micro F1: {fscore:.2f}")
 
@@ -250,8 +252,8 @@ def evaluate_model(config: Config, model: TransformersCRF, data_loader: DataLoad
             fscore = sum(f1Scores) / len(f1Scores)
     else: # PaserModeType.span
         # print('correct_pred, total_pred, total_golden: ', total_correct, total_predict, total_golden)
-        precision =total_correct / (total_predict+1e-10)
-        recall = total_correct / (total_golden + 1e-10)
+        precision =total_correct / (total_predict+1e-10) * 100
+        recall = total_correct / (total_golden + 1e-10) * 100
         fscore = precision * recall * 2 / (precision + recall + 1e-10)
         logger.info(f"[{name} set Total] Prec.: {precision:.2f}, Rec.: {recall:.2f}, Micro F1: {fscore:.2f}")
     return [precision, recall, fscore]
@@ -266,13 +268,16 @@ def main():
         logger.info(f"[Data Info] Tokenizing the instances using '{conf.embedder_type}' tokenizer")
         tokenizer = AutoTokenizer.from_pretrained(conf.embedder_type, add_prefix_space=True, use_fast=True)
         print(colored(f"[Data Info] Reading dataset from: \n{conf.train_file}\n{conf.dev_file}\n{conf.test_file}", "blue"))
-        train_dataset = TransformersNERDataset(conf.parser_mode, conf.train_file, tokenizer, number=conf.train_num, is_train=True)
+        train_dataset = TransformersNERDataset(conf.parser_mode, conf.dep_model, conf.train_file, tokenizer, number=conf.train_num, is_train=True)
         conf.label2idx = train_dataset.label2idx
         conf.idx2labels = train_dataset.idx2labels
-        conf.root_dep_label_id = train_dataset.root_dep_label_id
-
-        dev_dataset = TransformersNERDataset(conf.parser_mode, conf.dev_file, tokenizer, number=conf.dev_num, label2idx=train_dataset.label2idx, deplabel2idx=train_dataset.deplabel2idx, is_train=False)
-        test_dataset = TransformersNERDataset(conf.parser_mode, conf.test_file, tokenizer, number=conf.test_num, label2idx=train_dataset.label2idx, deplabel2idx=train_dataset.deplabel2idx, is_train=False)
+        if conf.dep_model != DepModelType.none:
+            conf.root_dep_label_id = train_dataset.root_dep_label_id
+            dev_dataset = TransformersNERDataset(conf.parser_mode, conf.dep_model, conf.dev_file, tokenizer, number=conf.dev_num, label2idx=train_dataset.label2idx, deplabel2idx=train_dataset.deplabel2idx, is_train=False)
+            test_dataset = TransformersNERDataset(conf.parser_mode, conf.dep_model, conf.test_file, tokenizer, number=conf.test_num, label2idx=train_dataset.label2idx, deplabel2idx=train_dataset.deplabel2idx, is_train=False)
+        else:
+            dev_dataset = TransformersNERDataset(conf.parser_mode, conf.dep_model, conf.dev_file, tokenizer, number=conf.dev_num, label2idx=train_dataset.label2idx, deplabel2idx=None, is_train=False)
+            test_dataset = TransformersNERDataset(conf.parser_mode, conf.dep_model, conf.test_file, tokenizer, number=conf.test_num, label2idx=train_dataset.label2idx, deplabel2idx=None, is_train=False)
         num_workers = 0
         conf.label_size = len(train_dataset.label2idx)
         train_dataloader = DataLoader(train_dataset, batch_size=conf.batch_size, shuffle=True, num_workers=num_workers,
