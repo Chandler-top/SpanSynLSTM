@@ -355,7 +355,7 @@ if __name__ == '__main__':
     # from transformers import RobertaTokenizer
     # tokenizer = RobertaTokenizerFast.from_pretrained('../../roberta-base', add_prefix_space=True)
     # tokenizer = DebertaTokenizer.from_pretrained('microsoft/deberta-base', add_prefix_space=True)
-    tokenizer = RobertaTokenizer.from_pretrained('../../roberta-base', add_prefix_space=True)
+    tokenizer = AutoTokenizer.from_pretrained('../../roberta-base', add_prefix_space=True)
     dataset = TransformersNERDataset(parser_mode=PaserModeType.span, dep_model=DepModelType.none, file="../../data/conll03/test.txt",tokenizer=tokenizer, is_train=True)
     from torch.utils.data import DataLoader
     train_dataloader = DataLoader(dataset, batch_size=10, shuffle=True, num_workers=2, collate_fn=dataset.collate_to_max_length)
