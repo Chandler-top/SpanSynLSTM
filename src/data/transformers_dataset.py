@@ -5,12 +5,14 @@
 from tqdm import tqdm
 from typing import List, Dict
 from torch.utils.data import Dataset
+import itertools
 from transformers import PreTrainedTokenizerFast, RobertaTokenizer
 import numpy as np
 from src.config.config import PaserModeType, DepModelType
 from src.data.data_utils import convert_iobes, build_spanlabel_idx, build_label_idx, build_deplabel_idx, enumerate_spans
 from src.data import Instance
 import logging
+import unicodedata
 from transformers.tokenization_utils_base import BatchEncoding
 
 logger = logging.getLogger(__name__)
@@ -61,6 +63,17 @@ class TransformersNERDataset(Dataset):
             self.insts_ids = self.convert_instances_to_feature_tensors(parser_mode, self.insts, tokenizer, None, label2idx)
         self.tokenizer = tokenizer
 
+    def is_punctuation(self, char):
+        # obtained from:
+        # https://github.com/huggingface/transformers/blob/5f25a5f367497278bf19c9994569db43f96d5278/transformers/tokenization_bert.py#L489
+        cp = ord(char)
+        if (cp >= 33 and cp <= 47) or (cp >= 58 and cp <= 64) or (cp >= 91 and cp <= 96) or (cp >= 123 and cp <= 126):
+            return True
+        cat = unicodedata.category(char)
+        if cat.startswith("P"):
+            return True
+        return False
+
     def convert_instances_to_feature_tensors(self, parser_mode: int, instances: List[Instance],
                                              tokenizer: PreTrainedTokenizerFast,
                                              deplabel2idx: Dict[str, int],
@@ -71,8 +84,12 @@ class TransformersNERDataset(Dataset):
         for idx, inst in tqdm(enumerate(instances)):
             words = inst.ori_words
             orig_to_tok_index = []
-            res = tokenizer.encode_plus(words, is_split_into_words=True)
-            subword_idx2word_idx = res.word_ids(batch_index=0)
+            # res = tokenizer.encode_plus(words, is_split_into_words=True) # RobertaTokenizerFast
+            # subword_idx2word_idx = res.word_ids(batch_index=0) # RobertaTokenizerFast
+            input_ids = tokenizer.encode(words, is_split_into_words=True)
+            attention_mask = [1] * len(input_ids)
+            tokens = [tokenizer.tokenize(w, add_prefix_space=True) for w in words]
+            subword_idx2word_idx = [None] + list(itertools.chain(*[[i] * len(li) for i, li in enumerate(tokens)])) + [None]
             prev_word_idx = -1
             for i, mapped_word_idx in enumerate(subword_idx2word_idx):
                 """
@@ -87,7 +104,8 @@ class TransformersNERDataset(Dataset):
                     prev_word_idx = mapped_word_idx
             assert len(orig_to_tok_index) == len(words)
 
-            segment_ids = [0] * len(res["input_ids"])
+            # segment_ids = [0] * len(res["input_ids"]) # RobertaTokenizerFast
+            segment_ids = [0] * len(input_ids)
             if deplabel2idx != None:
                 dep_labels = inst.dep_labels
                 deplabel_ids = [deplabel2idx[dep_label] for dep_label in dep_labels] if dep_labels else [-100] * len(words)
@@ -98,8 +116,8 @@ class TransformersNERDataset(Dataset):
             if parser_mode == PaserModeType.crf:
                 labels = inst.labels
                 label_ids = [label2idx[label] for label in labels] if labels else [-100] * len(words)
-                features.append({"input_ids": res["input_ids"],
-                                 "attention_mask": res["attention_mask"],
+                features.append({"input_ids": input_ids, # res["input_ids"], # RobertaTokenizerFast
+                                 "attention_mask": attention_mask, #res["attention_mask"], # RobertaTokenizerFast
                                  "orig_to_tok_index": orig_to_tok_index,
                                  "token_type_ids": segment_ids,
                                  "word_seq_len": len(orig_to_tok_index),
@@ -128,7 +146,8 @@ class TransformersNERDataset(Dataset):
                     span_ix = (start, end)
                     spans.append((start, end))
 
-                features.append({"input_ids": res["input_ids"], "attention_mask": res["attention_mask"],
+                features.append({"input_ids": input_ids, # res["input_ids"], # RobertaTokenizerFast,
+                                 "attention_mask": attention_mask, # res["attention_mask"],# RobertaTokenizerFast,
                                  "orig_to_tok_index": orig_to_tok_index, "token_type_ids": segment_ids,
                                  "word_seq_len": len(orig_to_tok_index),
                                  "dephead_ids": dephead_ids, "deplabel_ids": deplabel_ids,
@@ -332,10 +351,12 @@ class TransformersNERDataset(Dataset):
 ## testing code to test the dataset
 if __name__ == '__main__':
     from transformers import RobertaTokenizerFast
+    # from transformers import DebertaTokenizer
     # from transformers import RobertaTokenizer
-    tokenizer = RobertaTokenizerFast.from_pretrained('../../roberta-base', add_prefix_space=True)
-    # tokenizer = RobertaTokenizer.from_pretrained('../../roberta-base', add_prefix_space=True)
-    dataset = TransformersNERDataset(parser_mode=PaserModeType.span, dep_model=DepModelType.none, file="../../data/ontonotes_sample/train.sd.conllx",tokenizer=tokenizer, is_train=True)
+    # tokenizer = RobertaTokenizerFast.from_pretrained('../../roberta-base', add_prefix_space=True)
+    # tokenizer = DebertaTokenizer.from_pretrained('microsoft/deberta-base', add_prefix_space=True)
+    tokenizer = RobertaTokenizer.from_pretrained('../../roberta-base', add_prefix_space=True)
+    dataset = TransformersNERDataset(parser_mode=PaserModeType.span, dep_model=DepModelType.none, file="../../data/conll03/test.txt",tokenizer=tokenizer, is_train=True)
     from torch.utils.data import DataLoader
     train_dataloader = DataLoader(dataset, batch_size=10, shuffle=True, num_workers=2, collate_fn=dataset.collate_to_max_length)
     print(len(train_dataloader))
