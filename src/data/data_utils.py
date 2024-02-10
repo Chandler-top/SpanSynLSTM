@@ -190,7 +190,7 @@ def head_to_adj_label(max_len, words, heads, dep_labels, root_dep_label_id):
     directed = 0
     self_loop = False
 
-    dep_label_ret = np.zeros((max_len, max_len), dtype=np.long)
+    dep_label_ret = np.zeros((max_len, max_len), dtype=np.int64)
 
     for i, head in enumerate(heads):
         if head == 0:
