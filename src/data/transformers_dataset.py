@@ -75,7 +75,7 @@ class TransformersNERDataset(Dataset):
         return False
 
     def convert_instances_to_feature_tensors(self, parser_mode: int, instances: List[Instance],
-                                             tokenizer: PreTrainedTokenizerFast,
+                                             tokenizer: AutoTokenizer, #PreTrainedTokenizerFast,
                                              deplabel2idx: Dict[str, int],
                                              label2idx: Dict[str, int]) -> List[Dict]:
         features = []
