@@ -267,7 +267,7 @@ def main():
     if opt.mode == "train":
         conf = Config(opt)
         logger.info(f"[Data Info] Tokenizing the instances using '{conf.embedder_type}' tokenizer")
-        tokenizer = AutoTokenizer.from_pretrained(conf.embedder_type, add_prefix_space=True, use_fast=True)
+        tokenizer = AutoTokenizer.from_pretrained(conf.embedder_type, add_prefix_space=True)
         print(colored(f"[Data Info] Reading dataset from: \n{conf.train_file}\n{conf.dev_file}\n{conf.test_file}", "blue"))
         train_dataset = TransformersNERDataset(conf.parser_mode, conf.dep_model, conf.train_file, tokenizer, number=conf.train_num, is_train=True)
         conf.label2idx = train_dataset.label2idx
@@ -297,7 +297,7 @@ def main():
         saved_config = pickle.load(f) # we use `label2idx` from old config, but test file, test number
         f.close()
         print(colored(f"[Data Info] Tokenizing the instances using '{saved_config.embedder_type}' tokenizer", "blue"))
-        tokenizer = AutoTokenizer.from_pretrained(saved_config.embedder_type, add_prefix_space=True, use_fast=True)
+        tokenizer = AutoTokenizer.from_pretrained(saved_config.embedder_type, add_prefix_space=True)
         test_dataset = TransformersNERDataset(opt.test_file, tokenizer, number=opt.test_num,
                                               label2idx=saved_config.label2idx, is_train=False)
         test_dataloader = DataLoader(test_dataset, batch_size=opt.batch_size, shuffle=False, num_workers=1,
