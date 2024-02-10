@@ -6,7 +6,7 @@ from tqdm import tqdm
 from typing import List, Dict
 from torch.utils.data import Dataset
 import itertools
-from transformers import PreTrainedTokenizerFast, RobertaTokenizer
+from transformers import PreTrainedTokenizerFast, RobertaTokenizer, AutoTokenizer
 import numpy as np
 from src.config.config import PaserModeType, DepModelType
 from src.data.data_utils import convert_iobes, build_spanlabel_idx, build_label_idx, build_deplabel_idx, enumerate_spans
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 class TransformersNERDataset(Dataset):
     def __init__(self, parser_mode: int, dep_model: int, file: str,
-                 tokenizer: PreTrainedTokenizerFast,
+                 tokenizer: AutoTokenizer, # PreTrainedTokenizerFast,
                  is_train: bool,
                  sents: List[List[str]] = None,
                  label2idx: Dict[str, int] = None,
