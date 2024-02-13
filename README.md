@@ -22,7 +22,7 @@ Transformers 3.3.1
 | Model  | Dataset |  P | R | F1 |
 | ------------- | ------------- |------------- |------------- |------------- |
 | Roberta-base-Syn-LSTM-CRF  | OntoNotes 5  |  90.19  | 90.94  | 90.56  |
-| Roberta-base-Syn-LSTM-Span | OntoNotes 5  |  90.50  | 91.01  | 90.76  |
+| Roberta-base-Syn-LSTM-Span | OntoNotes 5  |  90.59  | 90.97  | 90.78  |
 | Roberta-base-CRF  | OntoNotes 5  |  90.17  | 91.34  | 90.75  |
 | Roberta-base-Span | OntoNotes 5  |  90.64  | 90.89  | 90.77  |
 | Roberta-base-CRF  | CoNLL-2003  | 92.00 | 93.04  | 92.52  |
