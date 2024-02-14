@@ -17,7 +17,7 @@ Transformers 3.3.1
 | Roberta-base-Syn-LSTM-CRF  | Chinese  | chinese-electra-180g-base-discriminator |-  |-  |-  |
 | Roberta-base-Syn-LSTM-Span | chinese  | chinese-electra-180g-base-discriminator |78.37  |81.55  | 79.92 |
 | Roberta-base-CRF  | Chinese  |chinese-electra-180g-base-discriminator |- |-  |-  |
-| Roberta-base-Span  | Chinese  |chinese-electra-180g-base-discriminator |78.52 |81.63  |80.04 |
+| Roberta-base-Span  | Chinese  |chinese-electra-180g-base-discriminator |79.46 |80.73  |80.09 |
 
 | Model  | Dataset |  Pretrained Model |P | R | F1 |
 | ------------- | --------------|--------------|--------------|--------------|------------- |
