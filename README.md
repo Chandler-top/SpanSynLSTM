@@ -13,11 +13,11 @@ Transformers 3.3.1
 # Performance
 
 | Model  | Dataset | F1 |
-| ------------- | ------------- |------------- |
-| Roberta-base-Syn-LSTM-CRF  | Chinese  |  -  |
-| Roberta-base-Syn-LSTM-Span | Chinese  |  -  |
-| Roberta-base-CRF  | Chinese  | - |
-| Roberta-base-Span  | Chinese  | - |
+| ------------- | ------------- |------------- |------------- |------------- |
+| Roberta-base-Syn-LSTM-CRF  | Chinese  |  -  |-  |-  |
+| Roberta-base-Syn-LSTM-Span | Chinese  |  78.37  |81.55  | 79.92 |
+| Roberta-base-CRF  | Chinese  | - |-  |-  |
+| Roberta-base-Span  | Chinese  | - |-  |-  |
 
 | Model  | Dataset |  P | R | F1 |
 | ------------- | ------------- |------------- |------------- |------------- |
