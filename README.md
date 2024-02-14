@@ -12,21 +12,21 @@ Transformers 3.3.1
 
 # Performance
 
-| Model  | Dataset | F1 |
-| ------------- | ------------- |------------- |------------- |------------- |
-| Roberta-base-Syn-LSTM-CRF  | Chinese  |  -  |-  |-  |
-| Roberta-base-Syn-LSTM-Span | Chinese  |  78.37  |81.55  | 79.92 |
-| Roberta-base-CRF  | Chinese  | - |-  |-  |
-| Roberta-base-Span  | Chinese  | - |-  |-  |
+| Model  | Dataset | Pretrained Model |P | R | F1 |
+| ------------- | ------------- |-------------|------------- |------------- |------------- |
+| Roberta-base-Syn-LSTM-CRF  | Chinese  | chinese-electra-180g-base-discriminator |-  |-  |-  |
+| Roberta-base-Syn-LSTM-Span | chinese  | chinese-electra-180g-base-discriminator |78.37  |81.55  | 79.92 |
+| Roberta-base-CRF  | Chinese  |chinese-electra-180g-base-discriminator |- |-  |-  |
+| Roberta-base-Span  | Chinese  |chinese-electra-180g-base-discriminator |- |-  |-  |
 
-| Model  | Dataset |  P | R | F1 |
-| ------------- | ------------- |------------- |------------- |------------- |
-| Roberta-base-Syn-LSTM-CRF  | OntoNotes 5  |  90.19  | 90.94  | 90.56  |
-| Roberta-base-Syn-LSTM-Span | OntoNotes 5  |  90.59  | 90.97  | 90.78  |
-| Roberta-base-CRF  | OntoNotes 5  |  90.17  | 91.34  | 90.75  |
-| Roberta-base-Span | OntoNotes 5  |  90.64  | 90.89  | 90.77  |
-| Roberta-base-CRF  | CoNLL-2003  | 92.00 | 93.04  | 92.52  |
-| Roberta-base-Span  | CoNLL-2003  | 92.47 | 92.81 | 92.65 |
+| Model  | Dataset |  Pretrained Model |P | R | F1 |
+| ------------- | --------------|--------------|--------------|--------------|------------- |
+| Roberta-base-Syn-LSTM-CRF  | OntoNotes 5  |RoBERTa-base|  90.19  | 90.94  | 90.56  |
+| Roberta-base-Syn-LSTM-Span | OntoNotes 5  |RoBERTa-base|  90.59  | 90.97  | 90.78  |
+| Roberta-base-CRF  | OntoNotes 5  |RoBERTa-base|  90.17  | 91.34  | 90.75  |
+| Roberta-base-Span | OntoNotes 5  |RoBERTa-base|  90.64  | 90.89  | 90.77  |
+| Roberta-base-CRF  | CoNLL-2003  |RoBERTa-base|92.00 | 93.04  | 92.52  |
+| Roberta-base-Span  | CoNLL-2003  | RoBERTa-base|92.47 | 92.81 | 92.65 |
 
 # Running
 Default:
