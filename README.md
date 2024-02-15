@@ -14,10 +14,10 @@ Transformers 3.3.1
 
 | Model  | Dataset | Pretrained Model |P | R | F1 |
 | ------------- | ------------- |-------------|------------- |------------- |------------- |
-| Roberta-base-Syn-LSTM-CRF  | Chinese  | chinese-electra-180g-base-discriminator |-  |-  |-  |
-| Roberta-base-Syn-LSTM-Span | chinese  | chinese-electra-180g-base-discriminator |78.37  |81.55  | 79.92 |
-| Roberta-base-CRF  | Chinese  |chinese-electra-180g-base-discriminator |- |-  |-  |
-| Roberta-base-Span  | Chinese  |chinese-electra-180g-base-discriminator |79.46 |80.73  |80.09 |
+| ELECTRA-base-Syn-LSTM-CRF  | Chinese  | chinese-electra-180g-base-discriminator |-  |-  |-  |
+| ELECTRA-base-Syn-LSTM-Span | chinese  | chinese-electra-180g-base-discriminator |78.37  |81.55  | 79.92 |
+| ELECTRA-base-CRF  | Chinese  |chinese-electra-180g-base-discriminator |- |-  |-  |
+| ELECTRA-base-Span  | Chinese  |chinese-electra-180g-base-discriminator |79.46 |80.73  |80.09 |
 
 | Model  | Dataset |  Pretrained Model |P | R | F1 |
 | ------------- | --------------|--------------|--------------|--------------|------------- |
