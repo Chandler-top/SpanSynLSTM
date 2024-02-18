@@ -12,9 +12,11 @@ Transformers 3.3.1
 
 # Performance
 learning_rate: 2e-05, batch_size: 20(30)
+
 F1:torch.cat((all_span_rep, att_span_emb) > torch.cat((all_span_rep, spanlen_rep) under ELECTRA-base-Syn-LSTM-Span
-all_span_rep = self._endpoint_span_extractor(feature_out, all_span_ids.long())  # [batch, n_span, hidden]
-att_span_emb = self.attentive_span_extractor(feature_out, all_span_ids.long())  # (batch_size, span_num, bert_dim)
+
+all_span_rep = self._endpoint_span_extractor(feature_out, all_span_ids.long()) 
+att_span_emb = self.attentive_span_extractor(feature_out, all_span_ids.long()) 
 all_span_rep = torch.cat((all_span_rep, att_span_emb), dim=-1)
 
 all_span_rep = self._endpoint_span_extractor(feature_out, all_span_ids.long()) 
