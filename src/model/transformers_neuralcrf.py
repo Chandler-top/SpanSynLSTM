@@ -44,7 +44,7 @@ class TransformersCRF(nn.Module):
         if self.parser_mode == PaserModeType.crf:
             self.inferencer = LinearCRF(label_size=config.label_size, label2idx=config.label2idx, add_iobes_constraint=config.add_iobes_constraint,
                                         idx2labels=config.idx2labels)
-            self.pad_idx = config.label2idx[PAD]
+            # self.pad_idx = config.label2idx[PAD]
         else:
             # import span-length embedding
             self.max_span_width = config.max_entity_length # max span length
@@ -58,18 +58,22 @@ class TransformersCRF(nn.Module):
                                                                       num_width_embeddings=self.max_span_width,
                                                                       span_width_embedding_dim=self.tokenLen_emb_dim,
                                                                       bucket_widths=True)
-                input_dim = config.dggcn_outputsize * 2 + self.tokenLen_emb_dim + self.spanLen_emb_dim
+                self.attentive_span_extractor = SelfAttentiveSpanExtractor(config.gcn_outputsize)
+                # input_dim = config.dggcn_outputsize * 2 + self.tokenLen_emb_dim + self.spanLen_emb_dim
+                input_dim = self._endpoint_span_extractor.get_output_dim() + self.attentive_span_extractor.get_output_dim()
             else:
                 self._endpoint_span_extractor = EndpointSpanExtractor(self.transformer.get_output_dim(),
                                                                       combination=self.span_combination_mode,
                                                                       num_width_embeddings=self.max_span_width,
                                                                       span_width_embedding_dim=self.tokenLen_emb_dim,
                                                                       bucket_widths=True)
-                input_dim = self.transformer.get_output_dim() * 2 + self.tokenLen_emb_dim + self.spanLen_emb_dim
-            self.linear = nn.Linear(10, 1)
-            self.score_func = nn.Softmax(dim=-1)
+                self.attentive_span_extractor = SelfAttentiveSpanExtractor(config.gcn_outputsize)
+                # input_dim = self.transformer.get_output_dim() * 2 + self.tokenLen_emb_dim + self.spanLen_emb_dim
+                input_dim = self._endpoint_span_extractor.get_output_dim() + self.attentive_span_extractor.get_output_dim()
+            # self.linear = nn.Linear(10, 1)
+            # self.score_func = nn.Softmax(dim=-1)
             self.span_classifier = MultiNonLinearClassifier(input_dim, config.label_size, 0.2) # model_dropout = 0.2
-            self.spanLen_embedding = nn.Embedding(self.max_span_width + 1, self.spanLen_emb_dim, padding_idx=0)
+            # self.spanLen_embedding = nn.Embedding(self.max_span_width + 1, self.spanLen_emb_dim, padding_idx=0)
             self.classifier = nn.Softmax(dim=-1)
             self.cross_entropy = nn.CrossEntropyLoss(reduction='none', ignore_index=-1)
 
@@ -123,9 +127,11 @@ class TransformersCRF(nn.Module):
                     return decodeIdx
             else: # span and hidden states begin and end tcat
                 all_span_rep = self._endpoint_span_extractor(feature_out, all_span_ids.long())  # [batch, n_span, hidden]
-                spanlen_rep = self.spanLen_embedding(all_span_lens)  # (bs, n_span, len_dim)
-                spanlen_rep = functional.relu(spanlen_rep)
-                all_span_rep = torch.cat((all_span_rep, spanlen_rep), dim=-1)
+                att_span_emb = self.attentive_span_extractor(feature_out, all_span_ids.long())  # (batch_size, span_num, bert_dim)
+                all_span_rep = torch.cat((all_span_rep, att_span_emb), dim=-1)
+                # spanlen_rep = self.spanLen_embedding(all_span_lens)  # (bs, n_span, len_dim)
+                # spanlen_rep = functional.relu(spanlen_rep)
+                # all_span_rep = torch.cat((all_span_rep, spanlen_rep), dim=-1)
                 all_span_rep = self.span_classifier(all_span_rep)  # (batch,n_span,n_class)
                 if is_train:
                     _, n_span = labels.size()
@@ -156,9 +162,11 @@ class TransformersCRF(nn.Module):
                     # return bestScores, decodeIdx
             else:
                 all_span_rep = self._endpoint_span_extractor(word_rep, all_span_ids.long())  # [batch, n_span, hidden]
-                spanlen_rep = self.spanLen_embedding(all_span_lens)  # (bs, n_span, len_dim)
-                spanlen_rep = functional.relu(spanlen_rep)
-                all_span_rep = torch.cat((all_span_rep, spanlen_rep), dim=-1)
+                att_span_emb = self.attentive_span_extractor(word_rep, all_span_ids.long())  # (batch_size, span_num, bert_dim)
+                all_span_rep = torch.cat((all_span_rep, att_span_emb), dim=-1)
+                # spanlen_rep = self.spanLen_embedding(all_span_lens)  # (bs, n_span, len_dim)
+                # spanlen_rep = functional.relu(spanlen_rep)
+                # all_span_rep = torch.cat((all_span_rep, spanlen_rep), dim=-1)
                 all_span_rep = self.span_classifier(all_span_rep)
                 if is_train:
                     _, n_span = labels.size()
