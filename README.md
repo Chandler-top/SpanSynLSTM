@@ -27,7 +27,7 @@ all_span_rep = torch.cat((all_span_rep, spanlen_rep), dim=-1)
 | Model  | Dataset | Pretrained Model |P | R | F1 |
 | ------------- | ------------- |-------------|------------- |------------- |------------- |
 | ELECTRA-base-Syn-LSTM-CRF  | Chinese  | chinese-electra-180g-base-discriminator |77.58  |80.80  |79.16  |
-| ELECTRA-base-Syn-LSTM-Span | chinese  | chinese-electra-180g-base-discriminator |78.96  |81.84  | 80.37 |
+| ELECTRA-base-Syn-LSTM-Span | chinese  | chinese-electra-180g-base-discriminator |78.79  |82.05  | 80.39 |
 | ELECTRA-base-CRF  | Chinese  |chinese-electra-180g-base-discriminator |- |-  |-  |
 | ELECTRA-base-Span  | Chinese  |chinese-electra-180g-base-discriminator |79.46 |80.73  |80.09 |
 
