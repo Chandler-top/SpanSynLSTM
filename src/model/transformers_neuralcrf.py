@@ -31,7 +31,7 @@ class TransformersCRF(nn.Module):
                                          hidden_dim=config.hidden_dim, drop_lstm=config.dropout)
         else:
             if config.dep_model == DepModelType.dggcn:
-                self.encoder = LinearEncoder(label_size=config.label_size, input_dim=config.dggcn_outputsize)
+                self.encoder = LinearEncoder(label_size=config.label_size, input_dim=config.gcn_outputsize)
             else:
                 self.encoder = LinearEncoder(label_size=config.label_size, input_dim=self.transformer.get_output_dim())
         self.dep_model = config.dep_model
