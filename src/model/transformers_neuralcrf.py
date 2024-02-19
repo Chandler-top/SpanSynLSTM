@@ -53,7 +53,7 @@ class TransformersCRF(nn.Module):
             self.span_combination_mode = 'x,y' # Train data in format defined by --data-io param
             #  bucket_widths: Whether to bucket the span widths into log-space buckets. If `False`, the raw span widths are used.
             if self.dep_model == DepModelType.dggcn:
-                self._endpoint_span_extractor = EndpointSpanExtractor(config.dggcn_outputsize,
+                self._endpoint_span_extractor = EndpointSpanExtractor(config.gcn_outputsize,
                                                                       combination=self.span_combination_mode,
                                                                       num_width_embeddings=self.max_span_width,
                                                                       span_width_embedding_dim=self.tokenLen_emb_dim,
