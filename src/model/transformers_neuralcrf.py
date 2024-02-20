@@ -67,7 +67,7 @@ class TransformersCRF(nn.Module):
                                                                       num_width_embeddings=self.max_span_width,
                                                                       span_width_embedding_dim=self.tokenLen_emb_dim,
                                                                       bucket_widths=True)
-                self.attentive_span_extractor = SelfAttentiveSpanExtractor(config.dggcn_outputsize)
+                self.attentive_span_extractor = SelfAttentiveSpanExtractor(self.transformer.get_output_dim())
                 # input_dim = self.transformer.get_output_dim() * 2 + self.tokenLen_emb_dim + self.spanLen_emb_dim
                 input_dim = self._endpoint_span_extractor.get_output_dim() + self.attentive_span_extractor.get_output_dim()
             # self.linear = nn.Linear(10, 1)
