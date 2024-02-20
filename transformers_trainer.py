@@ -18,18 +18,8 @@ from src.config.span_eval import span_f1,span_f1_prune,get_predict,get_predict_p
 
 from torch.utils.data import DataLoader
 from transformers import set_seed, AutoTokenizer
-import logging
-from termcolor import colored
-
-
-logging.basicConfig(
-    format="%(asctime)s - %(levelname)s - %(name)s -   %(message)s",
-    datefmt="%m/%d/%Y %H:%M:%S",
-    level=logging.INFO,
-)
-
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+from logger import get_logger
+logger = get_logger()
 
 def parse_arguments(parser):
     ###Training Hyperparameters
@@ -157,7 +147,6 @@ def train_model(config: Config, epoch: int, train_loader: DataLoader, dev_loader
         dev_metrics = evaluate_model(config, model, dev_loader, "dev", dev_loader.dataset.insts)
         test_metrics = evaluate_model(config, model, test_loader, "test", test_loader.dataset.insts)
         if dev_metrics[2] > best_dev[0]:
-            logger.info(f"saving the best model with best dev f1 score {dev_metrics[2]}")
             no_incre_dev = 0
             best_dev[0] = dev_metrics[2]
             best_dev[1] = i
@@ -179,10 +168,10 @@ def train_model(config: Config, epoch: int, train_loader: DataLoader, dev_loader
     # logger.info("Archiving the best Model...")
     # with tarfile.open(f"model_files/{model_folder}.tar.gz", "w:gz") as tar:
     #     tar.add(f"model_files/{model_folder}", arcname=os.path.basename(model_folder))
-    print("Finished archiving the models")
-    print("The best dev: %.2f" % (best_dev[0]))
-    print("The corresponding test: %.2f" % (best_test[0]))
-    print("Final testing.")
+    # print("Finished archiving the models")
+    # print("The best dev: %.2f" % (best_dev[0]))
+    # print("The corresponding test: %.2f" % (best_test[0]))
+    # print("Final testing.")
     # model.load_state_dict(torch.load(model_path))
     # model.eval()
     # evaluate_model(config, model, test_loader, "test", test_loader.dataset.insts)
@@ -266,7 +255,7 @@ def main():
     set_seed(opt.seed)
     if opt.mode == "train":
         conf = Config(opt)
-        logger.info(f"[Data Info] Tokenizing the instances using '{conf.embedder_type}' tokenizer")
+        # logger.info(f"[Data Info] Tokenizing the instances using '{conf.embedder_type}' tokenizer")
         tokenizer = AutoTokenizer.from_pretrained(conf.embedder_type, add_prefix_space=True)
         print(colored(f"[Data Info] Reading dataset from: \n{conf.train_file}\n{conf.dev_file}\n{conf.test_file}", "blue"))
         train_dataset = TransformersNERDataset(conf.parser_mode, conf.dep_model, conf.train_file, tokenizer, number=conf.train_num, is_train=True)
