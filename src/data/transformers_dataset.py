@@ -88,7 +88,7 @@ class TransformersNERDataset(Dataset):
             # subword_idx2word_idx = res.word_ids(batch_index=0) # RobertaTokenizerFast
             input_ids = tokenizer.encode(words, is_split_into_words=True)
             attention_mask = [1] * len(input_ids)
-            tokens = [tokenizer.tokenize(w) for w in words]
+            tokens = [tokenizer.tokenize(w) if w.isalnum() else [w] for w in words]
             subword_idx2word_idx = [None] + list(itertools.chain(*[[i] * len(li) for i, li in enumerate(tokens)])) + [None]
             prev_word_idx = -1
             for i, mapped_word_idx in enumerate(subword_idx2word_idx):
