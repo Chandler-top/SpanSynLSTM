@@ -20,6 +20,28 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+def bmes_to_bioes(labels: List[str]) -> List[str]:
+	bioes_labels = []
+	for label in labels:
+		if label.startswith('B-'):
+			entity_type = label[2:]
+			bioes_labels.append('B-' + entity_type)
+		elif label.startswith('M-'):
+			entity_type = label[2:]
+			bioes_labels.append('I-' + entity_type)
+		elif label.startswith('E-'):
+			entity_type = label[2:]
+			bioes_labels.append('E-' + entity_type)
+		elif label.startswith('S-'):
+			entity_type = label[2:]
+			bioes_labels.append('S-' + entity_type)
+		elif label == 'O':
+			bioes_labels.append('O')
+		else:
+			# Handle unexpected labels, you may modify this based on your needs
+			bioes_labels.append(label)
+	return bioes_labels
+
 def convert_iobes(labels: List[str]) -> List[str]:
 	"""
 	Use IOBES tagging schema to replace the IOB tagging schema in the instance
