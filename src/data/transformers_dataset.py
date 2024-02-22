@@ -81,7 +81,8 @@ class TransformersNERDataset(Dataset):
         features = []
         print("[Data Info] We are not limiting the max length in tokenizer. You should be aware of that")
         def clean_text(text):
-            cleaned_text = re.sub(r'\ufffd', '。', text)
+            unwanted_chars = ['\ufffd', '\ue305', '\ue00e', '\ue012']
+            cleaned_text = re.sub('|'.join(map(re.escape, unwanted_chars)), 'X', text)
             return cleaned_text
         for idx, inst in tqdm(enumerate(instances)):
             words = inst.ori_words
