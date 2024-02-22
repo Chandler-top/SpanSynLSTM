@@ -20,6 +20,27 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+def fewnerd_to_bioes(few_nerd_labels):
+    bioes_labels = []
+
+    for i in range(len(few_nerd_labels)):
+        entity_type = few_nerd_labels[i]
+
+        if entity_type == "O":
+            bioes_labels.append("O")
+        else:
+            if i == 0 or few_nerd_labels[i - 1] != entity_type:
+                if i < len(few_nerd_labels) - 1 and few_nerd_labels[i + 1] == entity_type:
+                    bioes_labels.append("B-" + entity_type)
+                else:
+                    bioes_labels.append("S-" + entity_type)
+            elif i < len(few_nerd_labels) - 1 and few_nerd_labels[i + 1] == entity_type:
+                bioes_labels.append("I-" + entity_type)
+            else:
+                bioes_labels.append("E-" + entity_type)
+
+    return bioes_labels
+	
 def bmes_to_bioes(labels: List[str]) -> List[str]:
 	bioes_labels = []
 	for label in labels:
