@@ -9,7 +9,7 @@ import itertools
 from transformers import PreTrainedTokenizerFast, RobertaTokenizer, AutoTokenizer
 import numpy as np
 from src.config.config import PaserModeType, DepModelType
-from src.data.data_utils import convert_iobes, build_spanlabel_idx, build_label_idx, build_deplabel_idx, enumerate_spans
+from src.data.data_utils import convert_iobes, bmes_to_bioes, build_spanlabel_idx, build_label_idx, build_deplabel_idx, enumerate_spans
 from src.data import Instance
 import logging
 import re
@@ -259,10 +259,13 @@ class TransformersNERDataset(Dataset):
                     continue
                 if line == "" and len(words) != 0:
                     if self.parser_mode == PaserModeType.crf:
-                        labels = convert_iobes(labels)
+                        if 'msra' in file:
+                            labels = bmes_to_bioes(labels)
+                        else:
+                            labels = convert_iobes(labels)
                     else:
                         chunks = self.get_chunks(labels)
-                    if 'conll' in file or 'wnut' in file or 'Weibo' in file or 'resume' in file:
+                    if 'conll' in file or 'wnut' in file or 'Weibo' in file or 'resume' or 'msra' in file:
                         insts.append(Instance(words=words, ori_words=ori_words, dep_heads=None, dep_labels=None, span_labels=chunks, labels=labels))
                     else:
                         insts.append(Instance(words=words, ori_words=ori_words, dep_heads=dep_heads, dep_labels=dep_labels, span_labels=chunks, labels=labels))
@@ -278,7 +281,7 @@ class TransformersNERDataset(Dataset):
                 elif line == "" and len(words) == 0:
                     continue
                 ls = line.split()
-                if 'conll' in file or 'wnut' in file or 'Weibo' in file or 'resume' in file:
+                if 'conll' in file or 'wnut' in file or 'Weibo' in file or 'resume' or 'msra' in file:
                     word, label = ls[0], ls[-1]
                 else:
                     word, head, dep_label, label = ls[1], int(ls[6]), ls[7], ls[-1]
