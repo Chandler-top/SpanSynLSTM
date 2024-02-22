@@ -9,7 +9,7 @@ import itertools
 from transformers import PreTrainedTokenizerFast, RobertaTokenizer, AutoTokenizer
 import numpy as np
 from src.config.config import PaserModeType, DepModelType
-from src.data.data_utils import convert_iobes, bmes_to_bioes, build_spanlabel_idx, build_label_idx, build_deplabel_idx, enumerate_spans
+from src.data.data_utils import convert_iobes, bmes_to_bioes, fewnerd_to_bioes, build_spanlabel_idx, build_label_idx, build_deplabel_idx, enumerate_spans
 from src.data import Instance
 import logging
 import re
@@ -209,6 +209,42 @@ class TransformersNERDataset(Dataset):
 
         return chunks
 
+    def get_fewnerd_chunks(self, seq):
+        default = 'O'
+        chunks = []
+        chunk_type, chunk_start = None, None
+        for i, tok in enumerate(seq):
+            # End of a chunk 1
+            if tok == default and chunk_type is not None:
+                # Add a chunk.
+                chunk = ((chunk_start, i - 1), chunk_type)
+                chunks.append(chunk)
+                if (i - chunk_start) > self.max_entity_length:
+                    self.max_entity_length = (i - chunk_start)
+                chunk_type, chunk_start = None, None
+            # End of a chunk + start of a chunk!
+            elif tok != default: # In few-NERD format, entity type is directly given
+                tok_chunk_class, tok_chunk_type = tok.split('-')[0], '-'.join(tok.split('-')[1:])
+                if chunk_type is None:
+                    chunk_type, chunk_start = tok_chunk_type, i
+                elif tok_chunk_type != chunk_type:
+                    # In few-NERD, treat different entity types as separate chunks
+                    chunk = ((chunk_start, i - 1), chunk_type)
+                    if (i - chunk_start) > self.max_entity_length:
+                        self.max_entity_length = (i - chunk_start)
+                    chunks.append(chunk)
+                    chunk_type, chunk_start = tok_chunk_type, i
+            else:
+                pass
+        # end condition
+        if chunk_type is not None:
+            chunk = ((chunk_start, len(seq) - 1), chunk_type)
+            if len(seq) - chunk_start > self.max_entity_length:
+                self.max_entity_length = len(seq) - chunk_start
+            chunks.append(chunk)
+
+        return chunks
+
     def enumerate_chunk(self, labels):
         entity_infos = []
         entity_labels = self.get_chunks(labels)
@@ -261,11 +297,16 @@ class TransformersNERDataset(Dataset):
                     if self.parser_mode == PaserModeType.crf:
                         if 'msra' in file:
                             labels = bmes_to_bioes(labels)
+                        elif 'fewnerd' in file:
+                            labels = fewnerd_to_bioes(labels)
                         else:
                             labels = convert_iobes(labels)
                     else:
-                        chunks = self.get_chunks(labels)
-                    if 'conll' in file or 'wnut' in file or 'Weibo' in file or 'resume' in file or 'msra' in file:
+                        if 'fewnerd' in file:
+                            chunks = self.get_fewnerd_chunks(labels)
+                        else:
+                            chunks = self.get_chunks(labels)
+                    if 'conll' in file or 'fewnerd' in file or 'Weibo' in file or 'resume' in file or 'msra' in file:
                         insts.append(Instance(words=words, ori_words=ori_words, dep_heads=None, dep_labels=None, span_labels=chunks, labels=labels))
                     else:
                         insts.append(Instance(words=words, ori_words=ori_words, dep_heads=dep_heads, dep_labels=dep_labels, span_labels=chunks, labels=labels))
@@ -281,7 +322,7 @@ class TransformersNERDataset(Dataset):
                 elif line == "" and len(words) == 0:
                     continue
                 ls = line.split()
-                if 'conll' in file or 'wnut' in file or 'Weibo' in file or 'resume' in file or 'msra' in file:
+                if 'conll' in file or 'fewnerd' in file or 'Weibo' in file or 'resume' in file or 'msra' in file:
                     word, label = ls[0], ls[-1]
                 else:
                     word, head, dep_label, label = ls[1], int(ls[6]), ls[7], ls[-1]
