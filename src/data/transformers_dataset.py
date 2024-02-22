@@ -12,6 +12,7 @@ from src.config.config import PaserModeType, DepModelType
 from src.data.data_utils import convert_iobes, build_spanlabel_idx, build_label_idx, build_deplabel_idx, enumerate_spans
 from src.data import Instance
 import logging
+import re
 import unicodedata
 from transformers.tokenization_utils_base import BatchEncoding
 
