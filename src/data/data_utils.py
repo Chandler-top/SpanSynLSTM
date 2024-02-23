@@ -20,7 +20,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-def fewnerd_to_bioes(few_nerd_labels):
+def bmes_to_bioes(few_nerd_labels):
     bioes_labels = []
 
     for i in range(len(few_nerd_labels)):
