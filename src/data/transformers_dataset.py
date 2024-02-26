@@ -13,6 +13,7 @@ from src.data.data_utils import convert_iobes, bmes_to_bioes, fewnerd_to_bioes, 
 from src.data import Instance
 import logging
 import re
+import json
 import unicodedata
 from transformers.tokenization_utils_base import BatchEncoding
 
@@ -21,8 +22,8 @@ logger = logging.getLogger(__name__)
 class TransformersNERDataset(Dataset):
     def __init__(self, parser_mode: int, dep_model: int, file: str,
                  tokenizer: AutoTokenizer, # PreTrainedTokenizerFast,
-                 is_train: bool,
-                 sents: List[List[str]] = None,
+                 is_train: bool, is_json: bool = False,
+                 # sents: List[List[str]] = None,
                  label2idx: Dict[str, int] = None,
                  deplabel2idx: Dict[str, int] = None,
                  number: int = -1):
@@ -33,9 +34,10 @@ class TransformersNERDataset(Dataset):
         self.parser_mode = parser_mode
         self.dep_mode = dep_model
         self.max_entity_length = 0
-        self.insts = self.read_file(file=file, number=number) if sents is None else self.read_from_sentences(sents)
-        minus = int((self.max_entity_length + 1) * self.max_entity_length / 2)
-        self.max_num_span = 128 * self.max_entity_length - minus # self.max_length = 128 max length of dataset
+        self.insts = self.read_from_json(file=file) if is_json else self.read_file(file=file, number=number)
+        # self.insts = self.read_file(file=file, number=number) if sents is None else self.read_from_sentences(sents)
+        # minus = int((self.max_entity_length + 1) * self.max_entity_length / 2)
+        # self.max_num_span = 128 * self.max_entity_length - minus # self.max_length = 128 max length of dataset
         if is_train:
             if label2idx is not None:
                 print(f"[WARNING] YOU ARE USING EXTERNAL label2idx, WHICH IS NOT BUILT FROM TRAINING SET.")
@@ -159,7 +161,19 @@ class TransformersNERDataset(Dataset):
                                  "span_lens": span_lens, "span_weight": span_weights,
                                  "span_mask": [1] * len(span_weights), "spanlabel_ids": spanlabel_ids})
         return features
-
+    
+    def read_from_json(self, file: str)-> List[Instance]:
+        print(f"[Data Info] Reading file: {file}")
+        insts = []
+        with open(file, 'r') as f:
+            data = json.load(f)
+        for record in data:
+            words = record["tokens"]
+            chunks = [((entity["start"], entity["end"]), entity["type"]) for entity in record["entities"]]
+            insts.append(Instance(words=words, ori_words=words, dep_heads=None, dep_labels=None, span_labels=chunks, labels=None))
+        print("number of sentences: {}".format(len(insts)))
+        return insts
+    
     def read_from_sentences(self, sents: List[List[str]]):
         """
         sents = [['word_a', 'word_b'], ['word_aaa', 'word_bccc', 'word_ccc']]
