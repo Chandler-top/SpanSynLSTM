@@ -290,7 +290,24 @@ class TransformersNERDataset(Dataset):
                 end = end_index
                 spans.append((start, end))
         return spans
-
+        
+    def read_from_json_clue(self, file:str)-> List[Instance]:
+        print(f"[Data Info] Reading file: {file}")
+        insts = []
+        with open(file, 'r', encoding='utf-8') as file:
+            for line in file:
+                data = json.loads(line)
+                chunks = []
+                words = data["text"]
+                for entity_type, entity_data in data["label"].items():
+                    for _, span in entity_data.items():
+                        chunks.append(((span[0][0], span[0][1]), entity_type))
+                        chunks_len = span[0][1] - span[0][0]
+                        self.entity_length_counts[chunks_len] = self.entity_length_counts.get(chunks_len, 0) + 1
+                        self.total_entities += 1
+                insts.append(Instance(words=words, ori_words=words, dep_heads=None, dep_labels=None, span_labels=chunks, labels=None))
+        return insts
+        
     def read_file(self, file: str, number: int = -1) -> List[Instance]:
         print(f"[Data Info] Reading file: {file}")
         print(f"[Data Info] Modify src/data/transformers_dataset.read_txt function if you have other requirements")
