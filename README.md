@@ -33,12 +33,13 @@ all_span_rep = torch.cat((all_span_rep, spanlen_rep), dim=-1)
 
 | Model  | Dataset |  Pretrained Model |P | R | F1 |
 | ------------- | --------------|--------------|--------------|--------------|------------- |
-| Roberta-base-Syn-LSTM-CRF  | OntoNotes 5  |RoBERTa-base|  90.19  | 90.94  | 90.56  |
-| Roberta-base-Syn-LSTM-Span | OntoNotes 5  |RoBERTa-base|  90.30  | 91.35  | 90.82  |
-| Roberta-base-CRF  | OntoNotes 5  |RoBERTa-base|  90.17  | 91.34  | 90.75  |
-| Roberta-base-Span | OntoNotes 5  |RoBERTa-base|  90.64  | 90.89  | 90.77  |
-| Roberta-base-CRF  | CoNLL-2003  |RoBERTa-base|92.00 | 93.04  | 92.52  |
-| Roberta-base-Span  | CoNLL-2003  | RoBERTa-base|92.47 | 92.81 | 92.65 |
+| Roberta-base-Syn-LSTM-CRF  | OntoNotes 5  |RoBERTa-Base|  90.19  | 90.94  | 90.56  |
+| Roberta-base-Syn-LSTM-Span | OntoNotes 5  |RoBERTa-Base|  90.30  | 91.35  | 90.82  |
+| Roberta-base-Syn-LSTM-Span | OntoNotes 5  |RoBERTa-Large|  90.61  | 91.33  | 90.97  |
+| Roberta-base-CRF  | OntoNotes 5  |RoBERTa-Base|  90.17  | 91.34  | 90.75  |
+| Roberta-base-Span | OntoNotes 5  |RoBERTa-Base|  90.64  | 90.89  | 90.77  |
+| Roberta-base-CRF  | CoNLL-2003  |RoBERTa-Base|92.00 | 93.04  | 92.52  |
+| Roberta-base-Span  | CoNLL-2003  | RoBERTa-Base|92.47 | 92.81 | 92.65 |
 
 # Running
 Default:
