@@ -41,8 +41,8 @@ all_span_rep = torch.cat((all_span_rep, spanlen_rep), dim=-1)
 | Roberta-base-Span | OntoNotes 5  |RoBERTa-Base|  90.64  | 90.89  | 90.77  |
 | Roberta-base-CRF  | CoNLL-2003  |RoBERTa-Base|92.00 | 93.04  | 92.52  |
 | Roberta-base-Span  | CoNLL-2003  | RoBERTa-Base|92.47 | 92.81 | 92.65 |
-| Roberta-base-LSTM-FFN-Biaffine  | CoNLL-2003  | RoBERTa-Base|-- | -- | 92.66 |
-, Rec.: , Micro F1: 
+| Roberta-base-LSTM-FFN-Biaffine  | CoNLL-2003  | RoBERTa-Base|-- | -- | 92.56 |
+
 # Running
 Default:
 
